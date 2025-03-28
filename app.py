@@ -11,6 +11,7 @@ from scripts.preprocess_teams import load_all_seasons, process_season_table, add
 
 st.set_page_config(page_title="LaLiga Analysis", layout="wide")
 
+@st.cache_data
 def load_data(selected_league):
     df_raw = load_all_seasons(league=selected_league)
     return df_raw
@@ -32,9 +33,7 @@ def recalculate_matchday(df):
 
 # Sidebar league selector
 selected_league = st.sidebar.selectbox("🏆 League", ["la-liga", "premier-league", "serie-a", "bundesliga"])
-from streamlit.runtime.caching import cache_data
-
-df_raw = cache_data(lambda league: load_all_seasons(league))(selected_league)
+df_raw = load_data(selected_league)
 
 df_raw = recalculate_matchday(df_raw)
 available_seasons = sorted(df_raw["season"].unique())
