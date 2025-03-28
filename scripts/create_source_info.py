@@ -2,9 +2,9 @@ import os
 import requests
 
 # Temporadas disponibles (ajusta si hay más)
-SEASONS = ["0001","0102","0203","0304","0405","0506","0607","0708","0809","0910","1011","1112", "1213","1314","1415","1516","1617","1718","1819","1920", "2021","2122","2223","2324","2425"]
+SEASONS = ["0506","0607","0708","0809","0910","1011","1112", "1213","1314","1415","1516","1617","1718","1819","1920", "2021","2122","2223","2324","2425"]
 BASE_URL = "https://raw.githubusercontent.com/datasets/football-datasets/main/datasets/la-liga/"
-TARGET_DIR = "../data/la-liga"
+TARGET_DIR = "../data/serie-a"
 
 def download_csvs():
     os.makedirs(TARGET_DIR, exist_ok=True)

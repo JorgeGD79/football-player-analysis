@@ -85,39 +85,31 @@ def add_matchday_column(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # Función para cargar todas las temporadas desde GCS
-def load_all_seasons():
+def load_all_seasons(league: str = "la-liga"):
     # Cargar el JSON desde los secrets
     gcs_credentials = json.loads(st.secrets["GCS_CREDENTIALS_JSON"])
-
-    # Reemplazar \\n por \n en la clave privada
     gcs_credentials["private_key"] = gcs_credentials["private_key"].replace("\\n", "\n")
-
-    # Crear las credenciales
     credentials = service_account.Credentials.from_service_account_info(gcs_credentials)
     client = storage.Client(credentials=credentials)
 
     bucket_name = st.secrets["GCS_BUCKET"]
-    # Inicializar cliente de Google Cloud Storage
     bucket = client.get_bucket(bucket_name)
 
     all_dfs = []
 
-    # Listar todos los archivos que comienzan con "season-" y terminan en ".csv"
-    blobs = bucket.list_blobs(prefix="la-liga/")  # Ruta dentro del bucket donde están los archivos CSV
+    # Usar prefijo dinámico según la liga
+    prefix = f"{league}/"
+    blobs = bucket.list_blobs(prefix=prefix)
 
     for blob in blobs:
-        if blob.name.endswith(".csv") and blob.name.startswith("season-"):
-            # Descargar el archivo CSV
+        if blob.name.endswith(".csv") and "season-" in blob.name:
             file_contents = blob.download_as_bytes()
             df = pd.read_csv(io.BytesIO(file_contents), parse_dates=["Date"], dayfirst=True)
 
-            # Extraer temporada desde el nombre del archivo
-            season_code = blob.name.replace("season-", "").replace(".csv", "")
-            df["season"] = f"20{season_code[:2]}-{season_code[2:]}"  # Adaptar si usas otro formato
-
+            season_code = blob.name.split("/")[-1].replace("season-", "").replace(".csv", "")
+            df["season"] = f"20{season_code[:2]}-{season_code[2:]}"
             all_dfs.append(df)
 
-    # Concatenar todos los DataFrames de las temporadas
     return pd.concat(all_dfs, ignore_index=True)
 
 
