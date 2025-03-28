@@ -45,6 +45,11 @@ view = st.sidebar.radio(":file_folder: Section", [
     "🌜 Cards per Team",
     "⚔️ Team Comparison",
     "📅 Match Statistics",
+    "🔮 Prediction Analysis",
+    "🧬 Team Clustering"
+    "🌜 Cards per Team",
+    "⚔️ Team Comparison",
+    "📅 Match Statistics",
     "🔮 Prediction Analysis"
 ])
 
@@ -218,6 +223,56 @@ elif view == "📅 Match Statistics":
     st.metric("⚽ Avg home goals", avg_goals["FTHG"])
     st.metric("Avg away goals", avg_goals["FTAG"])
     st.metric("Avg total goals", avg_goals["Total"])
+
+elif view == "🧬 Team Clustering":
+    st.title(f"🧬 Team Clustering – {selected_season}")
+
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.cluster import KMeans
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+
+    # Select relevant features for clustering
+    cluster_features = [
+        "points_per_game", "avg_goals_for", "avg_goals_against",
+        "shots_per_game", "shots_on_target_per_game", "conversion_rate",
+        "fouls_per_game", "cards_per_game", "cards_per_foul",
+        "intensity_index", "risk_index"
+    ]
+
+    X = df_stats[cluster_features].copy()
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Apply KMeans
+    kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+    clusters = kmeans.fit_predict(X_scaled)
+    df_stats["cluster"] = clusters
+
+    # Map clusters to labels (manual or descriptive)
+    cluster_labels = {
+        0: "Balanced",
+        1: "Aggressive",
+        2: "Defensive"
+    }
+    df_stats["Cluster Type"] = df_stats["cluster"].map(cluster_labels)
+
+    st.subheader("📋 Cluster assignment")
+    st.dataframe(df_stats[["team", "Cluster Type"] + cluster_features].sort_values("Cluster Type"), use_container_width=True)
+
+    st.subheader("📊 Cluster Heatmap")
+    clustered_data = df_stats.groupby("Cluster Type")[cluster_features].mean().T
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(clustered_data, annot=True, cmap="YlGnBu", fmt=".2f", ax=ax)
+    st.pyplot(fig)
+
+    st.subheader("🧠 Cluster Descriptions")
+    st.markdown("""
+    - **Aggressive**: Teams with high offensive stats, shots, and goal attempts, possibly higher risk.
+    - **Defensive**: Teams focused on minimizing goals against, often with fewer shots and conservative styles.
+    - **Balanced**: Teams that maintain an equilibrium between attack and defense.
+    """)
 
 elif view == "🔮 Prediction Analysis":
     st.title(f"🔮 Prediction Analysis – {selected_season}")
