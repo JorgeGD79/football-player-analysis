@@ -154,12 +154,10 @@ elif view == "⚔️ Team Comparison":
     ]
 
     from sklearn.preprocessing import MinMaxScaler
-
     scaler = MinMaxScaler()
-    comparison_data = df_stats[df_stats["team"].isin([team_a, team_b])][selected_metrics].copy()
-    comparison_data_scaled = scaler.fit_transform(comparison_data)
-    team_a_data = comparison_data_scaled[0]
-    team_b_data = comparison_data_scaled[1]
+    scaled_stats = pd.DataFrame(scaler.fit_transform(df_stats[selected_metrics]), columns=selected_metrics, index=df_stats["team"])
+    team_a_data = scaled_stats.loc[team_a].values
+    team_b_data = scaled_stats.loc[team_b].values
 
     fig_compare = go.Figure()
     fig_compare.add_trace(go.Scatterpolar(
