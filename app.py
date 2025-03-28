@@ -153,8 +153,13 @@ elif view == "⚔️ Team Comparison":
         "Intensity", "Risk"
     ]
 
-    team_a_data = df_stats[df_stats["team"] == team_a][selected_metrics].values.flatten()
-    team_b_data = df_stats[df_stats["team"] == team_b][selected_metrics].values.flatten()
+    from sklearn.preprocessing import MinMaxScaler
+
+    scaler = MinMaxScaler()
+    comparison_data = df_stats[df_stats["team"].isin([team_a, team_b])][selected_metrics].copy()
+    comparison_data_scaled = scaler.fit_transform(comparison_data)
+    team_a_data = comparison_data_scaled[0]
+    team_b_data = comparison_data_scaled[1]
 
     fig_compare = go.Figure()
     fig_compare.add_trace(go.Scatterpolar(
