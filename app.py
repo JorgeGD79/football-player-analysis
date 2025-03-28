@@ -13,7 +13,7 @@ st.set_page_config(page_title="LaLiga Analysis", layout="wide")
 
 @st.cache_data
 def load_data():
-    selected_league = st.sidebar.selectbox("🏆 League", ["la-liga", "premier-league", "serie-a", "bundesliga"])
+    selected_league = st.sidebar.selectbox("🏆 League", ["la-liga", "premier-league", "serie-a", "bundesliga", "ligue-1"])
     df_raw = load_all_seasons(league=selected_league)
     st.session_state["selected_league"] = selected_league
     return df_raw
