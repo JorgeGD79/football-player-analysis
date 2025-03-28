@@ -103,7 +103,7 @@ def load_all_seasons():
     all_dfs = []
 
     # Listar todos los archivos que comienzan con "season-" y terminan en ".csv"
-    blobs = bucket.list_blobs(prefix="la-liga")  # Ruta dentro del bucket donde están los archivos CSV
+    blobs = bucket.list_blobs()  # Ruta dentro del bucket donde están los archivos CSV
 
     for blob in blobs:
         if blob.name.endswith(".csv") and blob.name.startswith("season-"):
