@@ -11,9 +11,10 @@ from scripts.preprocess_teams import load_all_seasons, process_season_table, add
 
 st.set_page_config(page_title="LaLiga Analysis", layout="wide")
 
+@st.cache_data
 def load_data(selected_league):
-    df_raw = load_all_seasons(league=selected_league)
-    return df_raw
+    return load_all_seasons(league=selected_league)
+
 
 def load_from_gcs(bucket_name, file_path):
     client = storage.Client()
