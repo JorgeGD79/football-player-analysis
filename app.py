@@ -46,7 +46,7 @@ view = st.sidebar.radio(":file_folder: Section", [
     "⚔️ Team Comparison",
     "📅 Match Statistics",
     "🔮 Prediction Analysis",
-    "🧬 Team Clustering"
+    "🧬 Team Clustering",
     "🌜 Cards per Team",
     "⚔️ Team Comparison",
     "📅 Match Statistics",
