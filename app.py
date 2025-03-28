@@ -234,10 +234,9 @@ elif view == "🧬 Team Clustering":
 
     # Select relevant features for clustering
     cluster_features = [
-        "points_per_game", "avg_goals_for", "avg_goals_against",
-        "shots_per_game", "shots_on_target_per_game", "conversion_rate",
-        "fouls_per_game", "cards_per_game", "cards_per_foul",
-        "intensity_index", "risk_index"
+        "avg_goals_for", "avg_goals_against",
+        "shots_per_game", "shots_on_target_per_game",
+        "fouls_per_game", "cards_per_game"
     ]
 
     X = df_stats[cluster_features].copy()
