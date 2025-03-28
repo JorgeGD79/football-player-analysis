@@ -1,10 +1,11 @@
 import io
+import json
 
 import pandas as pd
 import os
 import streamlit as st
-
 from google.cloud import storage
+
 from google.oauth2 import service_account
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -82,11 +83,6 @@ def add_matchday_column(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-import pandas as pd
-from google.cloud import storage
-from io import BytesIO
-import json
-
 
 # Función para cargar todas las temporadas desde GCS
 def load_all_seasons():
@@ -94,8 +90,6 @@ def load_all_seasons():
     gcs_credentials = json.loads(st.secrets["GCS_CREDENTIALS_JSON"])
 
     # Reemplazar \\n por \n en la clave privada
-    gcs_credentials["private_key"] = gcs_credentials["private_key"].replace("\\n", "\n")
-
     # Crear las credenciales
     credentials = service_account.Credentials.from_service_account_info(gcs_credentials)
     client = storage.Client(credentials=credentials)
@@ -113,7 +107,7 @@ def load_all_seasons():
         if blob.name.endswith(".csv") and blob.name.startswith("season-"):
             # Descargar el archivo CSV
             file_contents = blob.download_as_bytes()
-            df = pd.read_csv(BytesIO(file_contents), parse_dates=["Date"], dayfirst=True)
+            df = pd.read_csv(io.BytesIO(file_contents), parse_dates=["Date"], dayfirst=True)
 
             # Extraer temporada desde el nombre del archivo
             season_code = blob.name.replace("season-", "").replace(".csv", "")
