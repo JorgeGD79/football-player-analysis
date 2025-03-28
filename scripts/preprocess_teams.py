@@ -8,9 +8,6 @@ from google.cloud import storage
 
 from google.oauth2 import service_account
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DATA_FOLDER = os.path.join(BASE_DIR, "data", "la-liga")
-
 SEASONS_MAP = {
     "0506": "2005-06",
     "0607": "2006-07",
