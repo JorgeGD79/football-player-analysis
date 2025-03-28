@@ -11,11 +11,8 @@ from scripts.preprocess_teams import load_all_seasons, process_season_table, add
 
 st.set_page_config(page_title="LaLiga Analysis", layout="wide")
 
-@st.cache_data
-def load_data():
-    selected_league = st.sidebar.selectbox("🏆 League", ["la-liga", "premier-league", "serie-a", "bundesliga", "ligue-1"])
+def load_data(selected_league):
     df_raw = load_all_seasons(league=selected_league)
-    st.session_state["selected_league"] = selected_league
     return df_raw
 
 def load_from_gcs(bucket_name, file_path):
@@ -33,9 +30,10 @@ def recalculate_matchday(df):
     df["matchday"] = df[["home_matchday", "away_matchday"]].max(axis=1)
     return df
 
-# Load selected league and data
-df_raw = load_data()
-selected_league = st.session_state.get("selected_league", "la-liga")
+# Sidebar league selector
+selected_league = st.sidebar.selectbox("🏆 League", ["la-liga", "premier-league", "serie-a", "bundesliga", "ligue-1"])
+df_raw = load_data(selected_league)
+
 df_raw = recalculate_matchday(df_raw)
 available_seasons = sorted(df_raw["season"].unique())
 selected_season = st.sidebar.selectbox("📅 Season", available_seasons, index=len(available_seasons) - 1)
