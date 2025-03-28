@@ -2,15 +2,30 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from google.cloud import storage
+from google.oauth2 import service_account
+import io
+import json
+
 from scripts.preprocess_teams import load_all_seasons, process_season_table, add_matchday_column
 
 st.set_page_config(page_title="Análisis LaLiga", layout="wide")
+
 
 # --- Datos
 @st.cache_data
 def load_data():
     df_raw = load_all_seasons()
     return df_raw
+
+
+def load_from_gcs(bucket_name, file_path):
+    client = storage.Client()
+    bucket = client.get_bucket(bucket_name)
+    blob = bucket.blob(file_path)
+    data = blob.download_as_bytes()
+    return pd.read_csv(io.BytesIO(data))
+
 
 # Recalcular jornadas por orden de partido por equipo y fecha por temporada
 def recalculate_matchday(df):
@@ -20,6 +35,7 @@ def recalculate_matchday(df):
     df["away_matchday"] = df.groupby(["season", "AwayTeam"]).cumcount() + 1
     df["matchday"] = df[["home_matchday", "away_matchday"]].max(axis=1)
     return df
+
 
 df_raw = load_data()
 df_raw = recalculate_matchday(df_raw)
@@ -197,6 +213,7 @@ elif view == "🔮 Análisis de Pronósticos":
     st.title(f"🔮 Análisis de Pronósticos – {selected_season}")
     df_matches = df_raw[df_raw["season"] == selected_season].copy()
 
+
     def label_result(row):
         if row["FTHG"] > row["FTAG"]:
             return "Local"
@@ -204,6 +221,7 @@ elif view == "🔮 Análisis de Pronósticos":
             return "Visitante"
         else:
             return "Empate"
+
 
     df_matches["Resultado"] = df_matches.apply(label_result, axis=1)
 
@@ -220,7 +238,7 @@ elif view == "🔮 Análisis de Pronósticos":
 
     st.subheader("📈 Probabilidad de Over (goles por partido)")
     for k, v in over_metrics.items():
-        st.metric(k, f"{v*100:.1f}%")
+        st.metric(k, f"{v * 100:.1f}%")
 
     avg_home_goals = df_matches["FTHG"].mean()
     avg_away_goals = df_matches["FTAG"].mean()
@@ -234,9 +252,12 @@ elif view == "🔮 Análisis de Pronósticos":
     selected_team = st.selectbox("Selecciona un equipo", all_teams)
 
     df_team = df_matches[(df_matches["HomeTeam"] == selected_team) | (df_matches["AwayTeam"] == selected_team)].copy()
-    df_team["goles_favor"] = df_team.apply(lambda row: row["FTHG"] if row["HomeTeam"] == selected_team else row["FTAG"], axis=1)
-    df_team["goles_contra"] = df_team.apply(lambda row: row["FTAG"] if row["HomeTeam"] == selected_team else row["FTHG"], axis=1)
-    df_team["resultado"] = df_team.apply(lambda row: "Victoria" if row["goles_favor"] > row["goles_contra"] else ("Empate" if row["goles_favor"] == row["goles_contra"] else "Derrota"), axis=1)
+    df_team["goles_favor"] = df_team.apply(lambda row: row["FTHG"] if row["HomeTeam"] == selected_team else row["FTAG"],
+                                           axis=1)
+    df_team["goles_contra"] = df_team.apply(
+        lambda row: row["FTAG"] if row["HomeTeam"] == selected_team else row["FTHG"], axis=1)
+    df_team["resultado"] = df_team.apply(lambda row: "Victoria" if row["goles_favor"] > row["goles_contra"] else (
+        "Empate" if row["goles_favor"] == row["goles_contra"] else "Derrota"), axis=1)
 
     total_partidos = len(df_team)
     victorias = (df_team["resultado"] == "Victoria").sum()
@@ -334,4 +355,3 @@ elif view == "🔮 Predicción de Partidos":
             st.markdown(f"**Probabilidad de victoria para {home_team}:** {proba[0] * 100:.2f}%")
             st.markdown(f"**Probabilidad de empate:** {proba[1] * 100:.2f}%")
             st.markdown(f"**Probabilidad de victoria para {away_team}:** {proba[2] * 100:.2f}%")
-
