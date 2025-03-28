@@ -85,7 +85,7 @@ def add_matchday_column(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # Función para cargar todas las temporadas desde GCS
-def load_all_seasons(league: str = "la-liga"):
+def load_all_seasons(league: str):
     # Cargar el JSON desde los secrets
     gcs_credentials = json.loads(st.secrets["GCS_CREDENTIALS_JSON"])
     gcs_credentials["private_key"] = gcs_credentials["private_key"].replace("\\n", "\n")
