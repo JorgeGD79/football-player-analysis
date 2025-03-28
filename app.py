@@ -7,15 +7,13 @@ from google.oauth2 import service_account
 import io
 import json
 
-from scripts.preprocess_teams import load_all_seasons, process_season_table
+from scripts.preprocess_teams import load_all_seasons, process_season_table, add_matchday_column
 
 st.set_page_config(page_title="LaLiga Analysis", layout="wide")
 
-
-@st.cache_data
-def load_data_cached(league):
-    return load_all_seasons(league=league)
-
+def load_data(selected_league):
+    df_raw = load_all_seasons(league=selected_league)
+    return df_raw
 
 def load_from_gcs(bucket_name, file_path):
     client = storage.Client()
@@ -23,7 +21,6 @@ def load_from_gcs(bucket_name, file_path):
     blob = bucket.blob(file_path)
     data = blob.download_as_bytes()
     return pd.read_csv(io.BytesIO(data))
-
 
 def recalculate_matchday(df):
     df = df.copy()
@@ -33,16 +30,11 @@ def recalculate_matchday(df):
     df["matchday"] = df[["home_matchday", "away_matchday"]].max(axis=1)
     return df
 
-
 # Sidebar league selector
-selected_league = st.sidebar.selectbox("🏆 League", ["la-liga", "premier-league", "serie-a", "bundesliga", "ligue-1"])
+selected_league = st.sidebar.selectbox("🏆 League", ["la-liga", "premier-league", "serie-a", "bundesliga"])
+from streamlit.runtime.caching import cache_data
 
-# Clear cache when league changes
-if "last_league" in st.session_state and st.session_state["last_league"] != selected_league:
-    st.cache_data.clear()
-
-st.session_state["last_league"] = selected_league
-df_raw = load_data_cached(selected_league)
+df_raw = cache_data(lambda league: load_all_seasons(league))(selected_league)
 
 df_raw = recalculate_matchday(df_raw)
 available_seasons = sorted(df_raw["season"].unique())
@@ -99,7 +91,7 @@ elif view == "🏆 Points per Team":
     st.title(f"🏆 Points per Team – {selected_season}")
     fig = px.bar(df_stats.sort_values("points", ascending=True),
                  x="points", y="team", orientation="h",
-                 title="Points per Team",
+                 title=f"Points per Team – {selected_league.replace('-', ' ').title()}",
                  labels={"points": "Points", "team": "Team"})
     st.plotly_chart(fig, use_container_width=True)
 
@@ -137,7 +129,7 @@ elif view == "🌜 Cards per Team":
     st.title(f"📊 Cards – {selected_season}")
     fig_cards = px.bar(df_stats.sort_values("cards_total", ascending=False),
                        x="team", y=["yellow", "red"],
-                       title="Cards per Team",
+                       title=f"Cards per Team – {selected_league.replace('-', ' ').title()}",
                        labels={"value": "Cards", "team": "Team"},
                        barmode="stack")
     st.plotly_chart(fig_cards, use_container_width=True)
@@ -166,10 +158,8 @@ elif view == "⚔️ Team Comparison":
     ]
 
     from sklearn.preprocessing import MinMaxScaler
-
     scaler = MinMaxScaler()
-    scaled_stats = pd.DataFrame(scaler.fit_transform(df_stats[selected_metrics]), columns=selected_metrics,
-                                index=df_stats["team"])
+    scaled_stats = pd.DataFrame(scaler.fit_transform(df_stats[selected_metrics]), columns=selected_metrics, index=df_stats["team"])
     team_a_data = scaled_stats.loc[team_a].values
     team_b_data = scaled_stats.loc[team_b].values
 
@@ -190,7 +180,7 @@ elif view == "⚔️ Team Comparison":
     fig_compare.update_layout(
         polar=dict(radialaxis=dict(visible=True)),
         showlegend=True,
-        title=f"📊 Performance Comparison: {team_a} vs {team_b}"
+        title=f"📊 Performance Comparison: {team_a} vs {team_b} – {selected_league.replace('-', ' ').title()}"
     )
 
     st.plotly_chart(fig_compare, use_container_width=True)
@@ -233,7 +223,7 @@ elif view == "📅 Match Statistics":
                         x="matchday", y=["FTHG", "FTAG", "Total"],
                         markers=True,
                         labels={"matchday": "Matchday", "value": "Goals"},
-                        title="Goals per Matchday (home, away and total)")
+                        title=f"Goals per Matchday – {selected_league.replace('-', ' ').title()}")
     st.plotly_chart(fig_goals, use_container_width=True)
 
     avg_goals = goals_by_round.mean().round(2)
@@ -251,10 +241,10 @@ elif view == "🧬 Team Clustering":
 
     # Select relevant features for clustering
     cluster_features = [
-        "avg_goals_for",  # more means more offensive
-        "avg_goals_against",  # less means more defensive
-        "shots_per_game"  # more means more aggressive
-    ]
+    "avg_goals_for",  # more means more offensive
+    "avg_goals_against",  # less means more defensive
+    "shots_per_game"  # more means more aggressive
+]
 
     X = df_stats[cluster_features].copy()
     scaler = StandardScaler()
@@ -270,9 +260,9 @@ elif view == "🧬 Team Clustering":
 
     # Compute custom score: more offensive and more shots, less goals against
     combined_score = (
-            cluster_centers["avg_goals_for"] +
-            cluster_centers["shots_per_game"] -
-            cluster_centers["avg_goals_against"]
+        cluster_centers["avg_goals_for"] +
+        cluster_centers["shots_per_game"] -
+        cluster_centers["avg_goals_against"]
     )
     sorted_clusters = combined_score.sort_values(ascending=False).index.tolist()
 
@@ -288,8 +278,7 @@ elif view == "🧬 Team Clustering":
     df_stats["Cluster Type"] = df_stats["cluster"].map(cluster_labels)
 
     st.subheader("📋 Cluster assignment")
-    st.dataframe(df_stats[["team", "Cluster Type"] + cluster_features].sort_values("Cluster Type"),
-                 use_container_width=True)
+    st.dataframe(df_stats[["team", "Cluster Type"] + cluster_features].sort_values("Cluster Type"), use_container_width=True)
 
     st.subheader("📊 Cluster Heatmap")
     clustered_data = df_stats.groupby("Cluster Type")[cluster_features].mean().T
@@ -309,7 +298,6 @@ elif view == "🔮 Prediction Analysis":
     st.title(f"🔮 Prediction Analysis – {selected_season}")
     df_matches = df_raw[df_raw["season"] == selected_season].copy()
 
-
     def label_result(row):
         if row["FTHG"] > row["FTAG"]:
             return "Home"
@@ -317,7 +305,6 @@ elif view == "🔮 Prediction Analysis":
             return "Away"
         else:
             return "Draw"
-
 
     df_matches["Result"] = df_matches.apply(label_result, axis=1)
 
