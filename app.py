@@ -234,10 +234,10 @@ elif view == "🧬 Team Clustering":
 
     # Select relevant features for clustering
     cluster_features = [
-        "avg_goals_for", "avg_goals_against",
-        "shots_per_game", "shots_on_target_per_game",
-        "fouls_per_game", "cards_per_game"
-    ]
+    "avg_goals_for",  # more means more offensive
+    "avg_goals_against",  # less means more defensive
+    "shots_per_game"  # more means more aggressive
+]
 
     X = df_stats[cluster_features].copy()
     scaler = StandardScaler()
@@ -248,12 +248,26 @@ elif view == "🧬 Team Clustering":
     clusters = kmeans.fit_predict(X_scaled)
     df_stats["cluster"] = clusters
 
-    # Map clusters to labels (manual or descriptive)
-    cluster_labels = {
-        0: "Balanced",
-        1: "Aggressive",
-        2: "Defensive"
-    }
+    # Optionally adjust cluster centroids for interpretability
+    cluster_centers = pd.DataFrame(kmeans.cluster_centers_, columns=cluster_features)
+
+    # Compute custom score: more offensive and more shots, less goals against
+    combined_score = (
+        cluster_centers["avg_goals_for"] +
+        cluster_centers["shots_per_game"] -
+        cluster_centers["avg_goals_against"]
+    )
+    sorted_clusters = combined_score.sort_values(ascending=False).index.tolist()
+
+    cluster_labels = {}
+    for i, cluster_id in enumerate(sorted_clusters):
+        if i == 0:
+            cluster_labels[cluster_id] = "Aggressive"
+        elif i == 1:
+            cluster_labels[cluster_id] = "Balanced"
+        else:
+            cluster_labels[cluster_id] = "Defensive"
+
     df_stats["Cluster Type"] = df_stats["cluster"].map(cluster_labels)
 
     st.subheader("📋 Cluster assignment")
